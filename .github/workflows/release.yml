@@ -1,0 +1,145 @@
+name: Build and Publish Releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Nombre del Tag / Versión (ej: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Empaquetar y Publicar Release (Windows & Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar Repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determinar Versión del Release
+        id: vars
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "Building release for version: ${TAG}"
+
+      - name: Instalar utilidades de empaquetado
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip unzip tofrodos
+
+      - name: Preparar Paquete para Linux (.tar.gz)
+        run: |
+          TAG="${{ steps.vars.outputs.TAG }}"
+          PKG_DIR="sgi_abs-${TAG}-linux"
+          mkdir -p "dist/${PKG_DIR}"
+
+          # Copiar archivos fuente del proyecto
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='.env' \
+                    --exclude='dist' \
+                    --exclude='backup_*.sql' \
+                    --exclude='*.tar.gz' \
+                    --exclude='*.zip' \
+                    --exclude='uploads/*' \
+                    ./ "dist/${PKG_DIR}/"
+
+          # Asegurar .gitkeep en uploads
+          mkdir -p "dist/${PKG_DIR}/uploads"
+          touch "dist/${PKG_DIR}/uploads/.gitkeep"
+
+          # Asignar permisos de ejecución para scripts en Linux
+          chmod +x "dist/${PKG_DIR}/start.sh" \
+                   "dist/${PKG_DIR}/stop.sh" \
+                   "dist/${PKG_DIR}/docker/docker-entrypoint.sh"
+
+          # Comprimir en formato tar.gz
+          cd dist
+          tar -czvf "${PKG_DIR}.tar.gz" "${PKG_DIR}"
+          cd ..
+
+      - name: Preparar Paquete para Windows (.zip)
+        run: |
+          TAG="${{ steps.vars.outputs.TAG }}"
+          PKG_DIR="sgi_abs-${TAG}-windows"
+          mkdir -p "dist/${PKG_DIR}"
+
+          # Copiar archivos fuente del proyecto
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='.env' \
+                    --exclude='dist' \
+                    --exclude='backup_*.sql' \
+                    --exclude='*.tar.gz' \
+                    --exclude='*.zip' \
+                    --exclude='uploads/*' \
+                    ./ "dist/${PKG_DIR}/"
+
+          # Asegurar .gitkeep en uploads
+          mkdir -p "dist/${PKG_DIR}/uploads"
+          touch "dist/${PKG_DIR}/uploads/.gitkeep"
+
+          # Convertir finales de línea a formato Windows (CRLF) para scripts por lotes
+          todos "dist/${PKG_DIR}/start.bat" "dist/${PKG_DIR}/stop.bat" "dist/${PKG_DIR}/.env.example" 2>/dev/null || true
+
+          # Comprimir en formato zip
+          cd dist
+          zip -r "${PKG_DIR}.zip" "${PKG_DIR}"
+          cd ..
+
+      - name: Generar Checksums SHA-256 de Verificación
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > checksums-sha256.txt
+          cat checksums-sha256.txt
+          cd ..
+
+      - name: Crear GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.TAG }}
+          name: SGI-ABS ${{ steps.vars.outputs.TAG }}
+          body: |
+            ## 🎓 SGI-ABS — Sistema de Gestión Institucional y Académica
+            ### Versión ${{ steps.vars.outputs.TAG }}
+
+            Paquetes preconfigurados listos para despliegue con Docker Compose en 1 solo clic.
+
+            ---
+
+            ### 📦 Descargas Disponibles
+
+            - 🐧 **Linux / macOS:** `sgi_abs-${{ steps.vars.outputs.TAG }}-linux.tar.gz`
+              - Descomprimir y ejecutar: `./start.sh`
+            - 🪟 **Windows:** `sgi_abs-${{ steps.vars.outputs.TAG }}-windows.zip`
+              - Descomprimir y hacer doble clic en: `start.bat`
+            - 🔒 **Integridad:** `checksums-sha256.txt` *(hashes SHA-256 para verificación de descarga)*
+
+            ---
+
+            ### 🚀 Servicios y Accesos
+            - **Web:** [http://localhost:8085](http://localhost:8085)
+            - **phpMyAdmin:** [http://localhost:8086](http://localhost:8086)
+            - **MySQL:** `localhost:3308`
+            - **Admin inicial:** `admin@abs.edu.co` / `Admin2026!`
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums-sha256.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
