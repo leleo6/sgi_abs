@@ -1,28 +1,64 @@
-# Entorno y variables sensibles
+# =====================================================================
+# SGI-ABS — Git Ignore
+# =====================================================================
+
+# 1. Variables de entorno y secretos locales (NUNCA versionar)
 .env
 .env.backup
 .env.production
+.env.local
+.env.*.local
+.env.testing
+.env.docker
 
-# Dependencias de Composer
+# 2. Dependencias de Composer
 /vendor/
 
-# Archivos de subida de usuarios (mantener carpeta vacía con .gitkeep)
+# 3. Almacenamiento dinámico de usuarios (conservar carpeta vacía)
 /uploads/*
 !/uploads/.gitkeep
 
-# Logs y temporales
+# 4. Artefactos de empaquetado y releases
+/dist/
+/build/
+*.zip
+*.tar.gz
+checksums*.txt
+
+# 5. Pruebas automatizadas y caché de PHPUnit
+.phpunit.result.cache
+.phpunit.cache/
+/coverage/
+.coverage/
+
+# 6. Logs, temporales y sesiones de prueba
 *.log
 /tmp/
+cookies.txt
+*.cookie
+*.tmp
 
-# Archivos del sistema y editores
+# 7. Volcados de Base de Datos y Backups
+*.sql.gz
+backup_*.sql
+dump_*.sql
+
+# 8. Certificados SSL y claves privadas
+*.pem
+*.key
+*.crt
+
+# 9. Editores, IDEs y Sistema Operativo
 .DS_Store
 Thumbs.db
+ehthumbs.db
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
+*.swp
+*.swo
+*~
 
-# Backups y volcados SQL
-*.sql.gz
-*.tar.gz
-backup_*.sql
+# 10. Archivos de asistentes de desarrollo e IA
+.gemini/
