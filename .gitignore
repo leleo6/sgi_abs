@@ -1,0 +1,28 @@
+# Entorno y variables sensibles
+.env
+.env.backup
+.env.production
+
+# Dependencias de Composer
+/vendor/
+
+# Archivos de subida de usuarios (mantener carpeta vacía con .gitkeep)
+/uploads/*
+!/uploads/.gitkeep
+
+# Logs y temporales
+*.log
+/tmp/
+
+# Archivos del sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Backups y volcados SQL
+*.sql.gz
+*.tar.gz
+backup_*.sql

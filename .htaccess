@@ -1,0 +1,15 @@
+Options -Indexes
+RewriteEngine On
+
+# Redirigir raíz a public/
+RewriteRule ^$ public/ [L]
+RewriteRule (.*) public/$1 [L]
+
+# Bloquear acceso directo a carpetas sensibles
+RewriteRule ^(config|core|models|controllers|views|uploads|sql|vendor)(\/.*)?$ - [F,L]
+
+# Bloquear archivos sensibles
+<FilesMatch "\.(sql|log|env|md|json|lock|gitignore)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
